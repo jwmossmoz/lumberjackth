@@ -68,7 +68,7 @@ class TreeherderClient:
         self.timeout = timeout
         self._headers = {
             "Accept": f"application/json; version={API_VERSION}",
-            "User-Agent": "lumberjack/0.1.0",
+            "User-Agent": "lumberjack/1.0.0",
         }
         self._sync_client: httpx.Client | None = None
         self._async_client: httpx.AsyncClient | None = None
