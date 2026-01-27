@@ -19,6 +19,7 @@ from lumberjackth.models.core import (
     FailureClassification,
     Job,
     JobLogUrl,
+    OptionCollection,
     Push,
     Repository,
 )
@@ -68,7 +69,7 @@ class TreeherderClient:
         self.timeout = timeout
         self._headers = {
             "Accept": f"application/json; version={API_VERSION}",
-            "User-Agent": "lumberjackth/1.0.3",
+            "User-Agent": "lumberjackth/1.0.4",
         }
         self._sync_client: httpx.Client | None = None
         self._async_client: httpx.AsyncClient | None = None
@@ -487,6 +488,22 @@ class TreeherderClient:
         """
         data = self._request("failureclassification")
         return [FailureClassification.model_validate(fc) for fc in data]
+
+    # -------------------------------------------------------------------------
+    # Option collection endpoints
+    # -------------------------------------------------------------------------
+
+    def get_option_collection_hash(self) -> list[OptionCollection]:
+        """Get all option collection hash mappings.
+
+        Option collections map build option combinations (like opt, debug, asan)
+        to their hash identifiers used in job data.
+
+        Returns:
+            List of OptionCollection objects.
+        """
+        data = self._request("optioncollectionhash")
+        return [OptionCollection.model_validate(oc) for oc in data]
 
     # -------------------------------------------------------------------------
     # Performance endpoints

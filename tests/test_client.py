@@ -184,6 +184,36 @@ class TestJobEndpoints:
         assert jobs[0].task_id == "task123"
 
 
+class TestOptionCollectionEndpoints:
+    """Tests for option collection endpoints."""
+
+    @respx.mock
+    def test_get_option_collection_hash(self) -> None:
+        """Test fetching option collection hashes."""
+        mock_data = [
+            {
+                "option_collection_hash": "abc123",
+                "options": [{"name": "opt"}],
+            },
+            {
+                "option_collection_hash": "def456",
+                "options": [{"name": "debug"}, {"name": "asan"}],
+            },
+        ]
+
+        respx.get("https://treeherder.mozilla.org/api/optioncollectionhash/").mock(
+            return_value=httpx.Response(200, json=mock_data)
+        )
+
+        with TreeherderClient() as client:
+            collections = client.get_option_collection_hash()
+
+        assert len(collections) == 2
+        assert collections[0].option_collection_hash == "abc123"
+        assert collections[0].options == [{"name": "opt"}]
+        assert collections[1].option_collection_hash == "def456"
+
+
 class TestErrorHandling:
     """Tests for error handling."""
 
