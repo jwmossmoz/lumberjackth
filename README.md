@@ -7,9 +7,9 @@ Treeherder is a reporting dashboard for Mozilla checkins. It allows users to see
 ## Installation
 
 ```bash
-pip install lumberjack
+pip install lumberjackth
 # or with uv
-uv pip install lumberjack
+uv pip install lumberjackthth
 ```
 
 ## CLI Usage

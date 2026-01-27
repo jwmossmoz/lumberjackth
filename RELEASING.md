@@ -69,7 +69,7 @@ git push && git push --tags
 ### 4. Verify Release
 
 1. Check GitHub Actions: https://github.com/jwmossmoz/lumberjack/actions
-2. Verify PyPI: https://pypi.org/project/lumberjack/
+2. Verify PyPI: https://pypi.org/project/lumberjackth/
 3. Verify GitHub Release: https://github.com/jwmossmoz/lumberjack/releases
 
 ## Version Numbering

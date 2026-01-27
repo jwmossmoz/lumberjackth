@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-01-27
+
+### Changed
+
+- Renamed PyPI package to `lumberjackth`
+- Added security CI job with actionlint and zizmor
+- Added pre-commit hooks configuration
+- Pinned all GitHub Actions to commit SHAs
+
 ## [1.0.0] - 2026-01-27
 
 ### Added
@@ -27,5 +36,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `/api/machineplatforms/` - Machine platforms
   - `/api/changelog/` - Treeherder changelog
 
-[Unreleased]: https://github.com/jwmossmoz/lumberjack/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/jwmossmoz/lumberjack/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/jwmossmoz/lumberjack/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/jwmossmoz/lumberjack/releases/tag/v1.0.0

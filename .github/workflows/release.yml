@@ -5,18 +5,29 @@ on:
     tags:
       - "v*"
 
-permissions:
-  contents: write
-  id-token: write
+# Restrict default permissions - jobs must explicitly request what they need
+permissions: {}
+
+# Prevent concurrent releases
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
+    name: Build package
     runs-on: ubuntu-latest
+    permissions:
+      contents: read  # Required to checkout code
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Install uv
         uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081 # v5
+        with:
+          enable-cache: false  # Disable cache to prevent cache poisoning on release
 
       - name: Set up Python
         run: uv python install 3.11
@@ -31,11 +42,14 @@ jobs:
           path: dist/
 
   publish-pypi:
+    name: Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for PyPI trusted publishing (OIDC)
     environment:
       name: pypi
-      url: https://pypi.org/project/lumberjack/
+      url: https://pypi.org/project/lumberjackth/
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -47,10 +61,15 @@ jobs:
         uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
 
   github-release:
+    name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required to create releases and upload assets
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Download artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
