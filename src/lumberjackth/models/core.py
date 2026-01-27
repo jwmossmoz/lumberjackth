@@ -107,7 +107,7 @@ class Job(BaseModel):
     option_collection_hash: str
 
     # Status
-    state: Literal["pending", "running", "completed"]
+    state: Literal["pending", "running", "completed", "unscheduled"]
     result: str
     failure_classification_id: int
     tier: int
