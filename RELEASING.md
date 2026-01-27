@@ -53,8 +53,8 @@ Move items from `[Unreleased]` to a new version section:
 Update the links at the bottom:
 
 ```markdown
-[Unreleased]: https://github.com/jwmossmoz/lumberjack/compare/vX.Y.Z...HEAD
-[X.Y.Z]: https://github.com/jwmossmoz/lumberjack/releases/tag/vX.Y.Z
+[Unreleased]: https://github.com/jwmossmoz/lumberjackth/compare/vX.Y.Z...HEAD
+[X.Y.Z]: https://github.com/jwmossmoz/lumberjackth/releases/tag/vX.Y.Z
 ```
 
 ### 3. Commit and Tag
@@ -68,9 +68,9 @@ git push && git push --tags
 
 ### 4. Verify Release
 
-1. Check GitHub Actions: https://github.com/jwmossmoz/lumberjack/actions
+1. Check GitHub Actions: https://github.com/jwmossmoz/lumberjackth/actions
 2. Verify PyPI: https://pypi.org/project/lumberjackth/
-3. Verify GitHub Release: https://github.com/jwmossmoz/lumberjack/releases
+3. Verify GitHub Release: https://github.com/jwmossmoz/lumberjackth/releases
 
 ## Version Numbering
 

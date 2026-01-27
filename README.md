@@ -141,7 +141,7 @@ Lumberjack is a modern replacement for the `treeherder-client` package, which ha
 
 ```bash
 # Clone the repository
-git clone https://github.com/jwmossmoz/lumberjack.git
+git clone https://github.com/jwmossmoz/lumberjackth.git
 cd lumberjack
 
 # Install dependencies

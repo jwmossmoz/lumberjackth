@@ -29,10 +29,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/jwmossmoz/lumberjack"
-Documentation = "https://github.com/jwmossmoz/lumberjack#readme"
-Repository = "https://github.com/jwmossmoz/lumberjack"
-Issues = "https://github.com/jwmossmoz/lumberjack/issues"
+Homepage = "https://github.com/jwmossmoz/lumberjackth"
+Documentation = "https://github.com/jwmossmoz/lumberjackth#readme"
+Repository = "https://github.com/jwmossmoz/lumberjackth"
+Issues = "https://github.com/jwmossmoz/lumberjackth/issues"
 
 [project.scripts]
 lumberjack = "lumberjack.cli:main"
