@@ -176,7 +176,13 @@ def pushes(
 @click.option("--result", help="Filter by result (success, testfailed, etc.).")
 @click.option("--state", help="Filter by state (pending, running, completed).")
 @click.option("--tier", type=int, help="Filter by tier (1, 2, or 3).")
-@click.option("-n", "--count", default=20, help="Number of jobs to show.")
+@click.option(
+    "-n",
+    "--count",
+    default=None,
+    type=int,
+    help="Number of jobs to show (default: 20, or all when --push-id is specified).",
+)
 @click.pass_context
 def jobs(
     ctx: click.Context,
@@ -186,13 +192,17 @@ def jobs(
     result: str | None,
     state: str | None,
     tier: int | None,
-    count: int,
+    count: int | None,
 ) -> None:
     """List jobs for a project.
 
     PROJECT is the repository name (e.g., mozilla-central, autoland).
     """
     client: TreeherderClient = ctx.obj["client"]
+
+    # Default to all jobs when filtering by push_id, otherwise 20
+    if count is None:
+        count = 2000 if push_id else 20
 
     try:
         job_list = client.get_jobs(
