@@ -9,7 +9,7 @@ Treeherder is a reporting dashboard for Mozilla checkins. It allows users to see
 ```bash
 pip install lumberjackth
 # or with uv
-uv pip install lumberjackthth
+uv pip install lumberjackth
 ```
 
 ## CLI Usage
@@ -56,7 +56,7 @@ lumberjack --json pushes mozilla-central -n 5
 ## Python API
 
 ```python
-from lumberjack import TreeherderClient
+from lumberjackth import TreeherderClient
 
 # Create a client
 client = TreeherderClient()
@@ -96,7 +96,7 @@ for alert in alerts:
 
 ```python
 import asyncio
-from lumberjack import TreeherderClient
+from lumberjackth import TreeherderClient
 
 async def main():
     async with TreeherderClient() as client:
@@ -142,7 +142,7 @@ Lumberjack is a modern replacement for the `treeherder-client` package, which ha
 ```bash
 # Clone the repository
 git clone https://github.com/jwmossmoz/lumberjackth.git
-cd lumberjack
+cd lumberjackth
 
 # Install dependencies
 uv sync --all-groups

@@ -6,8 +6,8 @@ import httpx
 import pytest
 import respx
 
-from lumberjack import TreeherderClient
-from lumberjack.exceptions import TreeherderAPIError, TreeherderNotFoundError
+from lumberjackth import TreeherderClient
+from lumberjackth.exceptions import TreeherderAPIError, TreeherderNotFoundError
 
 
 class TestTreeherderClient:

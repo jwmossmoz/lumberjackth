@@ -9,20 +9,20 @@ from urllib.parse import urljoin
 import httpx
 from pydantic import BaseModel
 
-from lumberjack.exceptions import (
+from lumberjackth.exceptions import (
     TreeherderAPIError,
     TreeherderAuthError,
     TreeherderNotFoundError,
     TreeherderRateLimitError,
 )
-from lumberjack.models.core import (
+from lumberjackth.models.core import (
     FailureClassification,
     Job,
     JobLogUrl,
     Push,
     Repository,
 )
-from lumberjack.models.performance import (
+from lumberjackth.models.performance import (
     PerformanceAlertSummary,
     PerformanceFramework,
 )

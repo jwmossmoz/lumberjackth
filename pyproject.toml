@@ -35,18 +35,12 @@ Repository = "https://github.com/jwmossmoz/lumberjackth"
 Issues = "https://github.com/jwmossmoz/lumberjackth/issues"
 
 [project.scripts]
-lumberjack = "lumberjack.cli:main"
-lj = "lumberjack.cli:main"
+lumberjack = "lumberjackth.cli:main"
+lj = "lumberjackth.cli:main"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/lumberjack"]
-
-[tool.hatch.build.targets.sdist]
-include = ["src/lumberjack", "tests"]
+requires = ["uv_build>=0.6.17,<0.7.0"]
+build-backend = "uv_build"
 
 [dependency-groups]
 dev = [{ include-group = "lint" }, { include-group = "test" }, { include-group = "audit" }]
@@ -78,19 +72,19 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "PLR2004", "ANN", "SLF001", "SIM117"]
-"src/lumberjack/cli.py" = ["FBT001", "PLR2004"]
+"src/lumberjackth/cli.py" = ["FBT001", "PLR2004"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-addopts = "--cov=lumberjack --cov-report=term-missing"
+addopts = "--cov=lumberjackth --cov-report=term-missing"
 
 [tool.ty.environment]
 python-version = "3.11"
 
 [tool.coverage.run]
-source = ["src/lumberjack"]
+source = ["src/lumberjackth"]
 branch = true
 
 [tool.coverage.report]

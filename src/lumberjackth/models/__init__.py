@@ -1,6 +1,6 @@
 """Pydantic models for Treeherder API responses."""
 
-from lumberjack.models.core import (
+from lumberjackth.models.core import (
     FailureClassification,
     Job,
     JobLogUrl,
@@ -8,12 +8,12 @@ from lumberjack.models.core import (
     Push,
     Repository,
 )
-from lumberjack.models.performance import (
+from lumberjackth.models.performance import (
     PerformanceAlert,
     PerformanceAlertSummary,
     PerformanceFramework,
 )
-from lumberjack.models.taskcluster import TaskclusterMetadata
+from lumberjackth.models.taskcluster import TaskclusterMetadata
 
 __all__ = [
     "FailureClassification",

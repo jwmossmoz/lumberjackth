@@ -11,8 +11,8 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from lumberjack import TreeherderClient, __version__
-from lumberjack.exceptions import LumberjackError
+from lumberjackth import TreeherderClient, __version__
+from lumberjackth.exceptions import LumberjackError
 
 console = Console()
 error_console = Console(stderr=True)

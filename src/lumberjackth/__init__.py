@@ -1,7 +1,7 @@
 """Lumberjack - A modern CLI and Python client for Mozilla Treeherder."""
 
-from lumberjack.client import TreeherderClient
-from lumberjack.exceptions import (
+from lumberjackth.client import TreeherderClient
+from lumberjackth.exceptions import (
     LumberjackError,
     TreeherderAPIError,
     TreeherderAuthError,
