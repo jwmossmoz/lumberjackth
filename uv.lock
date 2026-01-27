@@ -348,8 +348,8 @@ wheels = [
 ]
 
 [[package]]
-name = "lumberjack"
-version = "1.0.0"
+name = "lumberjackth"
+version = "1.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
