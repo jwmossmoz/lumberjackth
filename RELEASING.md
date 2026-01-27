@@ -24,14 +24,22 @@ Update the version in these files:
 # pyproject.toml
 version = "X.Y.Z"
 
-# src/lumberjack/__init__.py
+# src/lumberjackth/__init__.py
 __version__ = "X.Y.Z"
 
-# src/lumberjack/client.py (User-Agent string)
-"User-Agent": "lumberjack/X.Y.Z",
+# src/lumberjackth/client.py (User-Agent string)
+"User-Agent": "lumberjackth/X.Y.Z",
 ```
 
-### 2. Update CHANGELOG.md
+### 2. Update uv.lock
+
+Run `uv sync` to update the lockfile with the new version:
+
+```bash
+uv sync --all-groups
+```
+
+### 3. Update CHANGELOG.md
 
 Move items from `[Unreleased]` to a new version section:
 
@@ -57,16 +65,16 @@ Update the links at the bottom:
 [X.Y.Z]: https://github.com/jwmossmoz/lumberjackth/releases/tag/vX.Y.Z
 ```
 
-### 3. Commit and Tag
+### 4. Commit and Tag
 
 ```bash
-git add -A
+git add pyproject.toml src/lumberjackth/__init__.py src/lumberjackth/client.py CHANGELOG.md uv.lock
 git commit -m "Release vX.Y.Z"
 git tag vX.Y.Z
 git push && git push --tags
 ```
 
-### 4. Verify Release
+### 5. Verify Release
 
 1. Check GitHub Actions: https://github.com/jwmossmoz/lumberjackth/actions
 2. Verify PyPI: https://pypi.org/project/lumberjackth/

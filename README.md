@@ -118,6 +118,7 @@ Lumberjack supports the following Treeherder API endpoints:
 | `/api/project/{project}/jobs/` | `get_jobs()` | List jobs |
 | `/api/project/{project}/job-log-url/` | `get_job_log_urls()` | Get job logs |
 | `/api/failureclassification/` | `get_failure_classifications()` | Failure types |
+| `/api/optioncollectionhash/` | `get_option_collection_hash()` | Option collections |
 | `/api/performance/framework/` | `get_performance_frameworks()` | Perf frameworks |
 | `/api/performance/alertsummary/` | `get_performance_alert_summaries()` | Perf alerts |
 | `/api/machineplatforms/` | `get_machine_platforms()` | Machine platforms |
