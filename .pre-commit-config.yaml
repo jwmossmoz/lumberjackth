@@ -1,0 +1,59 @@
+# Pre-commit configuration for lumberjack
+# Install: prek install (or pre-commit install)
+# Run: prek run --all-files (or pre-commit run --all-files)
+
+default_language_version:
+  python: python3.11
+
+repos:
+  # === Code Quality ===
+
+  # Ruff - linting and formatting (replaces black, isort, flake8)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.14
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # === General File Checks ===
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+
+  # === Security Hooks ===
+
+  # Shell script linting - catches unquoted vars, undefined vars, deprecated syntax
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.11.0
+    hooks:
+      - id: shellcheck
+        args: [--severity=error]
+
+  # Secret detection - prevents committing API keys, passwords, tokens
+  # Run `detect-secrets scan > .secrets.baseline` before first use
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: [--baseline, .secrets.baseline]
+
+  # GitHub Actions linting - catches syntax errors, invalid refs
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.10
+    hooks:
+      - id: actionlint
+
+  # GitHub Actions security audit - excessive permissions, injection risks
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.22.0
+    hooks:
+      - id: zizmor
+        args: [--persona=auditor]
