@@ -46,6 +46,67 @@ def output_json(data: Any) -> None:
     click.echo(json.dumps(data, indent=2, default=str))
 
 
+def _display_failures_table(failure_list: list[Any], bug_id: int) -> None:
+    """Display failures in a table format."""
+    table = Table(title=f"Failures for Bug {bug_id}")
+    table.add_column("Time", style="dim")
+    table.add_column("Tree", style="cyan")
+    table.add_column("Platform")
+    table.add_column("Build")
+    table.add_column("Test Suite")
+    table.add_column("Task ID", style="dim")
+
+    for failure in failure_list:
+        test_suite = failure.test_suite
+        if len(test_suite) > 40:
+            test_suite = test_suite[:40] + "..."
+        table.add_row(
+            failure.push_time[:16],
+            failure.tree,
+            failure.platform,
+            failure.build_type,
+            test_suite,
+            failure.task_id[:12],
+        )
+
+    console.print(table)
+    console.print(f"\nTotal: [bold]{len(failure_list)}[/bold] failures")
+
+
+def _display_error_patterns(failure_list: list[Any]) -> None:
+    """Display unique error patterns from failures."""
+    all_lines: set[str] = set()
+    for f in failure_list:
+        all_lines.update(f.lines)
+    if not all_lines:
+        return
+
+    console.print("\n[bold]Unique error patterns:[/bold]")
+    for line in sorted(all_lines)[:10]:
+        display_line = line[:100] + "..." if len(line) > 100 else line
+        console.print(f"  [red]•[/red] {display_line}")
+    if len(all_lines) > 10:
+        console.print(f"  ... and {len(all_lines) - 10} more")
+
+
+def _display_bug_suggestions(suggestion_list: list[Any]) -> None:
+    """Display bug suggestions for errors."""
+    if not suggestion_list:
+        return
+
+    console.print("[bold]Bug Suggestions:[/bold]\n")
+    for sugg in suggestion_list:
+        new_marker = "[yellow]NEW[/yellow] " if sugg.failure_new_in_rev else ""
+        console.print(f"  {new_marker}[dim]Line {sugg.line_number}:[/dim] {sugg.search[:80]}")
+        open_bugs = sugg.bugs.get("open_recent", [])
+        for bug in open_bugs[:3]:
+            if bug.id:
+                console.print(f"    [cyan]Bug {bug.id}[/cyan]: {bug.summary[:60]}")
+            else:
+                console.print(f"    [dim]{bug.summary[:70]}[/dim]")
+        console.print()
+
+
 @click.group()
 @click.option(
     "--server",
@@ -401,6 +462,165 @@ def perf_frameworks(ctx: click.Context) -> None:
             table.add_row(str(fw.id), fw.name)
 
         console.print(table)
+
+    except LumberjackError as e:
+        error_console.print(f"[red]Error:[/red] {e}")
+        sys.exit(1)
+
+
+@main.command("failures")
+@click.argument("bug_id", type=int)
+@click.option(
+    "-s",
+    "--startday",
+    help="Start date (YYYY-MM-DD). Defaults to 7 days ago.",
+)
+@click.option(
+    "-e",
+    "--endday",
+    help="End date (YYYY-MM-DD). Defaults to today.",
+)
+@click.option(
+    "-t",
+    "--tree",
+    default="all",
+    help="Repository filter (all, autoland, mozilla-central, etc.).",
+)
+@click.option(
+    "-p",
+    "--platform",
+    help="Filter by platform (e.g., 'windows11-64-24h2', 'linux').",
+)
+@click.option(
+    "-b",
+    "--build-type",
+    help="Filter by build type (e.g., 'asan', 'debug', 'opt').",
+)
+@click.option(
+    "-n",
+    "--count",
+    type=int,
+    help="Limit number of results shown.",
+)
+@click.pass_context
+def failures(
+    ctx: click.Context,
+    bug_id: int,
+    startday: str | None,
+    endday: str | None,
+    tree: str,
+    platform: str | None,
+    build_type: str | None,
+    count: int | None,
+) -> None:
+    """List test failures associated with a bug.
+
+    BUG_ID is the Bugzilla bug number.
+
+    This command queries failures across all repositories, useful for
+    investigating intermittent failures or tracking image rollout regressions.
+
+    Examples:
+
+    \b
+        # All failures for bug 2012615 in the last 7 days
+        lj failures 2012615
+
+    \b
+        # Filter to windows asan failures on autoland
+        lj failures 2012615 -t autoland -p windows11-64-24h2 -b asan
+
+    \b
+        # Failures in a specific date range
+        lj failures 2012615 -s 2026-01-26 -e 2026-01-28
+    """
+    client: TreeherderClient = ctx.obj["client"]
+
+    try:
+        failure_list = client.get_failures_by_bug(
+            bug_id,
+            startday=startday,
+            endday=endday,
+            tree=tree,
+        )
+
+        # Apply client-side filters
+        if platform:
+            failure_list = [f for f in failure_list if platform.lower() in f.platform.lower()]
+        if build_type:
+            failure_list = [f for f in failure_list if build_type.lower() in f.build_type.lower()]
+        if count:
+            failure_list = failure_list[:count]
+
+        if ctx.obj["json"]:
+            output_json(failure_list)
+            return
+
+        if not failure_list:
+            console.print(f"No failures found for bug [cyan]{bug_id}[/cyan]")
+            return
+
+        _display_failures_table(failure_list, bug_id)
+        _display_error_patterns(failure_list)
+
+    except LumberjackError as e:
+        error_console.print(f"[red]Error:[/red] {e}")
+        sys.exit(1)
+
+
+@main.command("errors")
+@click.argument("project")
+@click.argument("job_id", type=int)
+@click.option("--suggestions/--no-suggestions", default=True, help="Show bug suggestions.")
+@click.pass_context
+def errors(
+    ctx: click.Context,
+    project: str,
+    job_id: int,
+    suggestions: bool,
+) -> None:
+    """Show error lines and bug suggestions for a failed job.
+
+    PROJECT is the repository name (e.g., autoland).
+    JOB_ID is the numeric job ID (not the task ID).
+
+    Examples:
+
+    \b
+        # Show errors for job 545896732 on autoland
+        lj errors autoland 545896732
+
+    \b
+        # Just errors, no bug suggestions
+        lj errors autoland 545896732 --no-suggestions
+    """
+    client: TreeherderClient = ctx.obj["client"]
+
+    try:
+        error_list = client.get_text_log_errors(project, job_id)
+
+        if ctx.obj["json"]:
+            data: dict[str, Any] = {"errors": [e.model_dump() for e in error_list]}
+            if suggestions:
+                suggestion_list = client.get_bug_suggestions(project, job_id)
+                data["suggestions"] = [s.model_dump() for s in suggestion_list]
+            output_json(data)
+            return
+
+        if not error_list:
+            console.print(f"No errors found for job [cyan]{job_id}[/cyan]")
+            return
+
+        console.print(f"\n[bold]Errors for Job {job_id}[/bold] ({project})\n")
+
+        for err in error_list:
+            new_marker = "[yellow]NEW[/yellow] " if err.new_failure else ""
+            console.print(f"  {new_marker}[dim]Line {err.line_number}:[/dim]")
+            console.print(f"    [red]{err.line}[/red]\n")
+
+        if suggestions:
+            suggestion_list = client.get_bug_suggestions(project, job_id)
+            _display_bug_suggestions(suggestion_list)
 
     except LumberjackError as e:
         error_console.print(f"[red]Error:[/red] {e}")

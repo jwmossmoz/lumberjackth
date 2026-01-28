@@ -178,3 +178,74 @@ class OptionCollection(BaseModel):
 
     option_collection_hash: str
     options: list[dict[str, str]]
+
+
+class FailureByBug(BaseModel):
+    """A test failure associated with a bug.
+
+    Returned by the /api/failuresbybug/ endpoint, which aggregates
+    failures across repositories filtered by bug ID.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    push_time: str
+    platform: str
+    revision: str
+    test_suite: str
+    tree: str
+    build_type: str
+    job_id: int
+    bug_id: int
+    machine_name: str
+    lines: list[str]
+    task_id: str
+
+
+class TextLogError(BaseModel):
+    """An error line from a job's log.
+
+    Returned by the /api/project/{project}/jobs/{job_id}/text_log_errors/ endpoint.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: int
+    line: str
+    line_number: int
+    new_failure: bool
+    job: int
+
+
+class BugMatch(BaseModel):
+    """A bug that matches an error line."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: int | None = None
+    status: str = ""
+    resolution: str = ""
+    summary: str
+    dupe_of: int | None = None
+    crash_signature: str = ""
+    keywords: str = ""
+    whiteboard: str = ""
+    internal_id: int | None = None
+    occurrences: int | None = None
+
+
+class BugSuggestion(BaseModel):
+    """Bug suggestions for a failure line.
+
+    Returned by the /api/project/{project}/jobs/{job_id}/bug_suggestions/ endpoint.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    search: str
+    search_terms: list[str]
+    path_end: str | None = None
+    bugs: dict[str, list[BugMatch]]
+    line_number: int
+    counter: int | None = None
+    failure_new_in_rev: bool = False

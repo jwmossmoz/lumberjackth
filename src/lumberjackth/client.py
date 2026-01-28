@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime, timedelta
 from typing import Any, Self, TypeVar
 from urllib.parse import urljoin
 
@@ -16,12 +17,15 @@ from lumberjackth.exceptions import (
     TreeherderRateLimitError,
 )
 from lumberjackth.models.core import (
+    BugSuggestion,
+    FailureByBug,
     FailureClassification,
     Job,
     JobLogUrl,
     OptionCollection,
     Push,
     Repository,
+    TextLogError,
 )
 from lumberjackth.models.performance import (
     PerformanceAlertSummary,
@@ -475,6 +479,144 @@ class TreeherderClient:
         data = self._request("job-log-url", project, job_id=job_id)
         results = data.get("results", data) if isinstance(data, dict) else data
         return [JobLogUrl.model_validate(log) for log in results]
+
+    def get_text_log_errors(
+        self,
+        project: str,
+        job_id: int,
+    ) -> list[TextLogError]:
+        """Get parsed error lines from a job's log.
+
+        Args:
+            project: Repository name.
+            job_id: Job ID.
+
+        Returns:
+            List of TextLogError objects containing error lines.
+        """
+        url = f"{self.server_url}/api/project/{project}/jobs/{job_id}/text_log_errors/"
+        response = self._get_sync_client().get(url)
+        self._handle_error(response)
+        data = response.json()
+        return [TextLogError.model_validate(e) for e in data]
+
+    async def get_text_log_errors_async(
+        self,
+        project: str,
+        job_id: int,
+    ) -> list[TextLogError]:
+        """Get parsed error lines from a job's log asynchronously."""
+        url = f"{self.server_url}/api/project/{project}/jobs/{job_id}/text_log_errors/"
+        response = await self._get_async_client().get(url)
+        self._handle_error(response)
+        data = response.json()
+        return [TextLogError.model_validate(e) for e in data]
+
+    def get_bug_suggestions(
+        self,
+        project: str,
+        job_id: int,
+    ) -> list[BugSuggestion]:
+        """Get bug suggestions for a failed job.
+
+        Args:
+            project: Repository name.
+            job_id: Job ID.
+
+        Returns:
+            List of BugSuggestion objects with matching bugs for each error.
+        """
+        url = f"{self.server_url}/api/project/{project}/jobs/{job_id}/bug_suggestions/"
+        response = self._get_sync_client().get(url)
+        self._handle_error(response)
+        data = response.json()
+        return [BugSuggestion.model_validate(s) for s in data]
+
+    async def get_bug_suggestions_async(
+        self,
+        project: str,
+        job_id: int,
+    ) -> list[BugSuggestion]:
+        """Get bug suggestions for a failed job asynchronously."""
+        url = f"{self.server_url}/api/project/{project}/jobs/{job_id}/bug_suggestions/"
+        response = await self._get_async_client().get(url)
+        self._handle_error(response)
+        data = response.json()
+        return [BugSuggestion.model_validate(s) for s in data]
+
+    # -------------------------------------------------------------------------
+    # Failures by bug endpoint
+    # -------------------------------------------------------------------------
+
+    def get_failures_by_bug(
+        self,
+        bug_id: int,
+        *,
+        startday: str | None = None,
+        endday: str | None = None,
+        tree: str = "all",
+    ) -> list[FailureByBug]:
+        """Get test failures associated with a bug.
+
+        This endpoint aggregates failures across repositories, making it useful
+        for investigating intermittent failures or tracking regressions.
+
+        Args:
+            bug_id: Bugzilla bug ID.
+            startday: Start date in YYYY-MM-DD format. Defaults to 7 days ago.
+            endday: End date in YYYY-MM-DD format. Defaults to today.
+            tree: Repository filter. Use "all" for all repos, or specific repo
+                  like "autoland", "mozilla-central".
+
+        Returns:
+            List of FailureByBug objects with failure details.
+        """
+        # API requires startday and endday - provide defaults
+        if endday is None:
+            endday = datetime.now(UTC).strftime("%Y-%m-%d")
+        if startday is None:
+            startday = (datetime.now(UTC) - timedelta(days=7)).strftime("%Y-%m-%d")
+
+        url = f"{self.server_url}/api/failuresbybug/"
+        params: dict[str, Any] = {
+            "bug": bug_id,
+            "tree": tree,
+            "startday": startday,
+            "endday": endday,
+        }
+
+        response = self._get_sync_client().get(url, params=params)
+        self._handle_error(response)
+        data = response.json()
+        return [FailureByBug.model_validate(f) for f in data]
+
+    async def get_failures_by_bug_async(
+        self,
+        bug_id: int,
+        *,
+        startday: str | None = None,
+        endday: str | None = None,
+        tree: str = "all",
+    ) -> list[FailureByBug]:
+        """Get test failures associated with a bug asynchronously."""
+        # API requires startday and endday - provide defaults
+        if endday is None:
+            endday = datetime.now(UTC).strftime("%Y-%m-%d")
+        if startday is None:
+            startday = (datetime.now(UTC) - timedelta(days=7)).strftime("%Y-%m-%d")
+
+        url = f"{self.server_url}/api/failuresbybug/"
+        params: dict[str, Any] = {
+            "bug": bug_id,
+            "tree": tree,
+            "startday": startday,
+            "endday": endday,
+        }
+
+        response = await self._get_async_client().get(url, params=params)
+        self._handle_error(response)
+        data = response.json()
+        return [FailureByBug.model_validate(f) for f in data]
 
     # -------------------------------------------------------------------------
     # Failure classification endpoints
