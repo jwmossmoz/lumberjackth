@@ -233,16 +233,26 @@ git clone https://github.com/jwmossmoz/lumberjackth.git
 cd lumberjackth
 
 # Install dependencies
-uv sync --all-groups
+make dev
 
 # Run tests
+make test
+
+# Run linting and type checking
+make lint
+
+# Format code
+make format
+
+# Build package
+make build
+```
+
+Or run commands directly with `uv run`:
+
+```bash
 uv run pytest
-
-# Run linting
 uv run ruff check .
-uv run ruff format --check .
-
-# Run type checking
 uv run ty check src/
 ```
 
