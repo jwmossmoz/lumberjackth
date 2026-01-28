@@ -62,11 +62,48 @@ uvx --from lumberjackth lj repos
 uvx --from lumberjackth lj failures 2012615 -t autoland
 ```
 
-### Options
+### Global Options
 
 - `-s, --server URL` - Treeherder server URL (default: https://treeherder.mozilla.org)
 - `--json` - Output as JSON instead of tables
 - `--version` - Show version
+
+### Command Options
+
+#### repos
+- `--active/--all` - Show only active repositories (default: active)
+
+#### pushes
+- `-n, --count` - Number of pushes to show (default: 10)
+- `-r, --revision` - Filter by revision
+- `-a, --author` - Filter by author email
+
+#### jobs
+- `--push-id` - Filter by push ID
+- `--guid` - Filter by job GUID
+- `--result` - Filter by result (success, testfailed, busted, etc.)
+- `--state` - Filter by state (pending, running, completed)
+- `--tier` - Filter by tier (1, 2, or 3)
+- `-n, --count` - Number of jobs to show (default: 20, or all when --push-id specified)
+
+#### job
+- `--logs` - Show log URLs
+
+#### failures
+- `-t, --tree` - Repository filter (all, autoland, mozilla-central, etc.)
+- `-p, --platform` - Filter by platform (e.g., windows11-64-24h2, linux)
+- `-b, --build-type` - Filter by build type (e.g., asan, debug, opt)
+- `-s, --startday` - Start date YYYY-MM-DD (default: 7 days ago)
+- `-e, --endday` - End date YYYY-MM-DD (default: today)
+- `-n, --count` - Limit number of results
+
+#### errors
+- `--suggestions/--no-suggestions` - Show bug suggestions (default: on)
+
+#### perf-alerts
+- `-r, --repository` - Filter by repository
+- `-f, --framework` - Filter by framework ID
+- `-n, --limit` - Number of alerts to show
 
 ## Python API
 
@@ -100,6 +137,15 @@ if job:
 logs = client.get_job_log_urls("mozilla-central", job.id)
 for log in logs:
     print(f"{log.name}: {log.url}")
+
+# Query failures by bug ID (useful for investigating intermittents)
+failures = client.get_failures_by_bug(2012615, tree="autoland")
+for f in failures:
+    print(f"{f.platform} {f.build_type}: {f.test_suite}")
+
+# Get error lines and bug suggestions for a failed job
+errors = client.get_text_log_errors("autoland", job_id=12345)
+suggestions = client.get_bug_suggestions("autoland", job_id=12345)
 
 # Performance alerts
 alerts = client.get_performance_alert_summaries(repository="autoland")
