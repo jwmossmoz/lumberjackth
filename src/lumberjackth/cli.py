@@ -137,6 +137,52 @@ def _get_log_lines(
     return lines
 
 
+def _filter_jobs(
+    job_list: list[Any],
+    platform: str | None,
+    job_filter: str | None,
+    duration_min: int | None,
+) -> list[Any]:
+    """Apply client-side filters to job list."""
+    import re  # noqa: PLC0415
+
+    if platform:
+        platform_re = re.compile(platform, re.IGNORECASE)
+        job_list = [j for j in job_list if platform_re.search(j.platform)]
+
+    if job_filter:
+        filter_re = re.compile(job_filter, re.IGNORECASE)
+        job_list = [j for j in job_list if filter_re.search(j.job_type_name)]
+
+    if duration_min:
+        job_list = [j for j in job_list if j.duration_seconds >= duration_min]
+
+    return job_list
+
+
+def _filter_failures(
+    failure_list: list[Any],
+    platform: str | None,
+    build_type: str | None,
+    count: int | None,
+) -> list[Any]:
+    """Apply client-side filters to failure list."""
+    import re  # noqa: PLC0415
+
+    if platform:
+        platform_re = re.compile(platform, re.IGNORECASE)
+        failure_list = [f for f in failure_list if platform_re.search(f.platform)]
+
+    if build_type:
+        build_re = re.compile(build_type, re.IGNORECASE)
+        failure_list = [f for f in failure_list if build_re.search(f.build_type)]
+
+    if count:
+        failure_list = failure_list[:count]
+
+    return failure_list
+
+
 @click.group()
 @click.option(
     "--server",
@@ -268,6 +314,22 @@ def pushes(
 @click.option("--state", help="Filter by state (pending, running, completed).")
 @click.option("--tier", type=int, help="Filter by tier (1, 2, or 3).")
 @click.option(
+    "-p",
+    "--platform",
+    help="Filter by platform (regex pattern, e.g., 'linux.*64').",
+)
+@click.option(
+    "-f",
+    "--filter",
+    "job_filter",
+    help="Filter by job name (regex pattern, e.g., 'mochitest').",
+)
+@click.option(
+    "--duration-min",
+    type=int,
+    help="Filter to jobs with duration >= N seconds.",
+)
+@click.option(
     "-n",
     "--count",
     default=None,
@@ -283,6 +345,9 @@ def jobs(
     result: str | None,
     state: str | None,
     tier: int | None,
+    platform: str | None,
+    job_filter: str | None,
+    duration_min: int | None,
     count: int | None,
 ) -> None:
     """List jobs for a project.
@@ -305,6 +370,9 @@ def jobs(
             state=state,
             tier=tier,
         )
+
+        # Apply client-side filters
+        job_list = _filter_jobs(job_list, platform, job_filter, duration_min)
 
         if ctx.obj["json"]:
             output_json(job_list)
@@ -519,12 +587,12 @@ def perf_frameworks(ctx: click.Context) -> None:
 @click.option(
     "-p",
     "--platform",
-    help="Filter by platform (e.g., 'windows11-64-24h2', 'linux').",
+    help="Filter by platform (regex pattern, e.g., 'windows.*64', 'linux').",
 )
 @click.option(
     "-b",
     "--build-type",
-    help="Filter by build type (e.g., 'asan', 'debug', 'opt').",
+    help="Filter by build type (regex pattern, e.g., 'asan', 'debug').",
 )
 @click.option(
     "-n",
@@ -574,13 +642,8 @@ def failures(
             tree=tree,
         )
 
-        # Apply client-side filters
-        if platform:
-            failure_list = [f for f in failure_list if platform.lower() in f.platform.lower()]
-        if build_type:
-            failure_list = [f for f in failure_list if build_type.lower() in f.build_type.lower()]
-        if count:
-            failure_list = failure_list[:count]
+        # Apply client-side filters (regex-based)
+        failure_list = _filter_failures(failure_list, platform, build_type, count)
 
         if ctx.obj["json"]:
             output_json(failure_list)
