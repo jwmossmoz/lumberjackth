@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-01-28
+
+### Added
+
+- New CLI command `failures <bug_id>`: Query test failures by bug ID across repositories
+  - Filter by platform (`-p`), build type (`-b`), tree (`-t`), and date range (`-s`, `-e`)
+  - Shows unique error patterns across all failures
+- New CLI command `errors <project> <job_id>`: Show error lines and bug suggestions for a failed job
+- New client methods:
+  - `get_failures_by_bug()`: Query `/api/failuresbybug/` endpoint
+  - `get_text_log_errors()`: Query `/api/project/{project}/jobs/{job_id}/text_log_errors/`
+  - `get_bug_suggestions()`: Query `/api/project/{project}/jobs/{job_id}/bug_suggestions/`
+- New models: `FailureByBug`, `TextLogError`, `BugSuggestion`, `BugMatch`
+
 ## [1.0.6] - 2026-01-27
 
 ### Changed
@@ -67,7 +81,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `/api/machineplatforms/` - Machine platforms
   - `/api/changelog/` - Treeherder changelog
 
-[Unreleased]: https://github.com/jwmossmoz/lumberjackth/compare/v1.0.6...HEAD
+[Unreleased]: https://github.com/jwmossmoz/lumberjackth/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/jwmossmoz/lumberjackth/compare/v1.0.6...v1.1.0
 [1.0.6]: https://github.com/jwmossmoz/lumberjackth/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/jwmossmoz/lumberjackth/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/jwmossmoz/lumberjackth/compare/v1.0.3...v1.0.4

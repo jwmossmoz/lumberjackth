@@ -214,6 +214,119 @@ class TestOptionCollectionEndpoints:
         assert collections[1].option_collection_hash == "def456"
 
 
+class TestFailuresByBugEndpoint:
+    """Tests for failures by bug endpoint."""
+
+    @respx.mock
+    def test_get_failures_by_bug(self) -> None:
+        """Test fetching failures by bug ID."""
+        mock_data = [
+            {
+                "push_time": "2026-01-28 14:44:08",
+                "platform": "windows11-64-24h2",
+                "revision": "abc123",
+                "test_suite": "opt-mochitest-browser-chrome-1",
+                "tree": "autoland",
+                "build_type": "asan",
+                "job_id": 12345,
+                "bug_id": 2012615,
+                "machine_name": "vm-test",
+                "lines": ["TEST-UNEXPECTED-FAIL | test.js | Test timed out"],
+                "task_id": "abc123def",
+            }
+        ]
+
+        respx.get("https://treeherder.mozilla.org/api/failuresbybug/").mock(
+            return_value=httpx.Response(200, json=mock_data)
+        )
+
+        with TreeherderClient() as client:
+            failures = client.get_failures_by_bug(
+                2012615, startday="2026-01-27", endday="2026-01-28", tree="autoland"
+            )
+
+        assert len(failures) == 1
+        assert failures[0].bug_id == 2012615
+        assert failures[0].platform == "windows11-64-24h2"
+        assert failures[0].build_type == "asan"
+        assert len(failures[0].lines) == 1
+
+
+class TestTextLogErrorsEndpoint:
+    """Tests for text log errors endpoint."""
+
+    @respx.mock
+    def test_get_text_log_errors(self) -> None:
+        """Test fetching text log errors for a job."""
+        mock_data = [
+            {
+                "id": 12345,
+                "line": "TEST-UNEXPECTED-FAIL | test.js | Test timed out",
+                "line_number": 100,
+                "new_failure": True,
+                "job": 54321,
+            }
+        ]
+
+        respx.get(
+            "https://treeherder.mozilla.org/api/project/autoland/jobs/54321/text_log_errors/"
+        ).mock(return_value=httpx.Response(200, json=mock_data))
+
+        with TreeherderClient() as client:
+            errors = client.get_text_log_errors("autoland", 54321)
+
+        assert len(errors) == 1
+        assert errors[0].id == 12345
+        assert errors[0].new_failure is True
+        assert errors[0].line_number == 100
+
+
+class TestBugSuggestionsEndpoint:
+    """Tests for bug suggestions endpoint."""
+
+    @respx.mock
+    def test_get_bug_suggestions(self) -> None:
+        """Test fetching bug suggestions for a job."""
+        mock_data = [
+            {
+                "search": "TEST-UNEXPECTED-FAIL | test.js | Test timed out",
+                "search_terms": ["test.js"],
+                "path_end": "test.js",
+                "bugs": {
+                    "open_recent": [
+                        {
+                            "id": 123456,
+                            "status": "NEW",
+                            "resolution": "",
+                            "summary": "Intermittent test.js failure",
+                            "dupe_of": None,
+                            "crash_signature": "",
+                            "keywords": "",
+                            "whiteboard": "",
+                        }
+                    ],
+                    "all_others": [],
+                },
+                "line_number": 100,
+                "counter": 1,
+                "failure_new_in_rev": False,
+            }
+        ]
+
+        respx.get(
+            "https://treeherder.mozilla.org/api/project/autoland/jobs/54321/bug_suggestions/"
+        ).mock(return_value=httpx.Response(200, json=mock_data))
+
+        with TreeherderClient() as client:
+            suggestions = client.get_bug_suggestions("autoland", 54321)
+
+        assert len(suggestions) == 1
+        assert suggestions[0].search_terms == ["test.js"]
+        assert suggestions[0].line_number == 100
+        assert len(suggestions[0].bugs["open_recent"]) == 1
+        assert suggestions[0].bugs["open_recent"][0].id == 123456
+
+
 class TestErrorHandling:
     """Tests for error handling."""
 

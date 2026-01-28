@@ -32,6 +32,12 @@ lumberjack job mozilla-central "abc123def/0" --logs
 # List performance alerts
 lumberjack perf-alerts --repository autoland
 
+# Query test failures by bug ID
+lumberjack failures 2012615 --tree autoland --platform windows11-64-24h2
+
+# Show errors and bug suggestions for a failed job
+lumberjack errors autoland 545896732
+
 # Output as JSON
 lumberjack --json pushes mozilla-central -n 5
 ```
@@ -44,6 +50,8 @@ lumberjack --json pushes mozilla-central -n 5
 | `pushes <project>` | List pushes for a project |
 | `jobs <project>` | List jobs for a project |
 | `job <project> <guid>` | Get details for a specific job |
+| `failures <bug_id>` | List test failures associated with a bug |
+| `errors <project> <job_id>` | Show error lines and bug suggestions |
 | `perf-alerts` | List performance alert summaries |
 | `perf-frameworks` | List performance testing frameworks |
 
@@ -117,6 +125,9 @@ Lumberjack supports the following Treeherder API endpoints:
 | `/api/project/{project}/push/` | `get_pushes()` | List pushes |
 | `/api/project/{project}/jobs/` | `get_jobs()` | List jobs |
 | `/api/project/{project}/job-log-url/` | `get_job_log_urls()` | Get job logs |
+| `/api/project/{project}/jobs/{id}/text_log_errors/` | `get_text_log_errors()` | Get error lines from job |
+| `/api/project/{project}/jobs/{id}/bug_suggestions/` | `get_bug_suggestions()` | Get bug suggestions |
+| `/api/failuresbybug/` | `get_failures_by_bug()` | Query failures by bug ID |
 | `/api/failureclassification/` | `get_failure_classifications()` | Failure types |
 | `/api/optioncollectionhash/` | `get_option_collection_hash()` | Option collections |
 | `/api/performance/framework/` | `get_performance_frameworks()` | Perf frameworks |
