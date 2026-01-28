@@ -38,6 +38,9 @@ lj failures 2012615 --tree autoland --platform windows11-64-24h2
 # Show errors and bug suggestions for a failed job
 lj errors autoland 545896732
 
+# Fetch and search job logs
+lj log autoland 545896732 --pattern "ERROR|FAIL" --context 3
+
 # Output as JSON
 lj --json pushes mozilla-central -n 5
 ```
@@ -50,6 +53,7 @@ lj --json pushes mozilla-central -n 5
 | `pushes <project>` | List pushes for a project |
 | `jobs <project>` | List jobs for a project |
 | `job <project> <guid>` | Get details for a specific job |
+| `log <project> <job_id>` | Fetch and search job logs |
 | `failures <bug_id>` | List test failures associated with a bug |
 | `errors <project> <job_id>` | Show error lines and bug suggestions |
 | `perf-alerts` | List performance alert summaries |
@@ -88,6 +92,13 @@ uvx --from lumberjackth lj failures 2012615 -t autoland
 
 #### job
 - `--logs` - Show log URLs
+
+#### log
+- `-p, --pattern` - Regex pattern to search for in the log
+- `-c, --context` - Number of context lines around matches (with --pattern)
+- `--log-name` - Name of log to fetch (default: live_backing_log)
+- `--head` - Show only the first N lines
+- `--tail` - Show only the last N lines
 
 #### failures
 - `-t, --tree` - Repository filter (all, autoland, mozilla-central, etc.)
@@ -147,6 +158,10 @@ for f in failures:
 errors = client.get_text_log_errors("autoland", job_id=12345)
 suggestions = client.get_bug_suggestions("autoland", job_id=12345)
 
+# Fetch and search job logs
+log_content = client.get_job_log("autoland", job_id=12345)
+matches = client.search_job_log("autoland", job_id=12345, pattern="ERROR", context_lines=3)
+
 # Performance alerts
 alerts = client.get_performance_alert_summaries(repository="autoland")
 for alert in alerts:
@@ -177,7 +192,9 @@ Lumberjack supports the following Treeherder API endpoints:
 | `/api/repository/` | `get_repositories()` | List repositories |
 | `/api/project/{project}/push/` | `get_pushes()` | List pushes |
 | `/api/project/{project}/jobs/` | `get_jobs()` | List jobs |
-| `/api/project/{project}/job-log-url/` | `get_job_log_urls()` | Get job logs |
+| `/api/project/{project}/job-log-url/` | `get_job_log_urls()` | Get job log URLs |
+| (log content URL) | `get_job_log()` | Fetch raw log content |
+| (log content URL) | `search_job_log()` | Search log with regex |
 | `/api/project/{project}/jobs/{id}/text_log_errors/` | `get_text_log_errors()` | Get error lines from job |
 | `/api/project/{project}/jobs/{id}/bug_suggestions/` | `get_bug_suggestions()` | Get bug suggestions |
 | `/api/failuresbybug/` | `get_failures_by_bug()` | Query failures by bug ID |

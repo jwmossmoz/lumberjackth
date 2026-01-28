@@ -107,6 +107,36 @@ def _display_bug_suggestions(suggestion_list: list[Any]) -> None:
         console.print()
 
 
+def _display_log_matches(matches: list[dict[str, Any]], pattern: str, context: int) -> None:
+    """Display log search matches with optional context."""
+    console.print(f"\n[bold]Found {len(matches)} matches[/bold] for pattern: {pattern}\n")
+    for match in matches:
+        console.print(f"[dim]Line {match['line_number']}:[/dim]")
+        if context > 0 and "context" in match:
+            for ctx_line in match["context"]:
+                if ctx_line == match["line"]:
+                    console.print(f"  [yellow]>{ctx_line}[/yellow]")
+                else:
+                    console.print(f"   {ctx_line}")
+        else:
+            console.print(f"  [yellow]{match['line']}[/yellow]")
+        console.print()
+
+
+def _get_log_lines(
+    log_content: str,
+    head: int | None,
+    tail: int | None,
+) -> list[str]:
+    """Extract lines from log content with optional head/tail limits."""
+    lines = log_content.splitlines()
+    if head:
+        return lines[:head]
+    if tail:
+        return lines[-tail:]
+    return lines
+
+
 @click.group()
 @click.option(
     "--server",
@@ -625,6 +655,136 @@ def errors(
     except LumberjackError as e:
         error_console.print(f"[red]Error:[/red] {e}")
         sys.exit(1)
+
+
+@main.command("log")
+@click.argument("project")
+@click.argument("job_id", type=int)
+@click.option(
+    "-p",
+    "--pattern",
+    help="Regex pattern to search for in the log.",
+)
+@click.option(
+    "-c",
+    "--context",
+    type=int,
+    default=0,
+    help="Number of context lines around matches (with --pattern).",
+)
+@click.option(
+    "--log-name",
+    default="live_backing_log",
+    help="Name of log to fetch (default: live_backing_log).",
+)
+@click.option(
+    "--head",
+    type=int,
+    help="Show only the first N lines.",
+)
+@click.option(
+    "--tail",
+    type=int,
+    help="Show only the last N lines.",
+)
+@click.pass_context
+def log(
+    ctx: click.Context,
+    project: str,
+    job_id: int,
+    pattern: str | None,
+    context: int,
+    log_name: str,
+    head: int | None,
+    tail: int | None,
+) -> None:
+    """Fetch and display a job's log.
+
+    PROJECT is the repository name (e.g., autoland).
+    JOB_ID is the numeric job ID.
+
+    Examples:
+
+    \b
+        # View full log
+        lj log autoland 545896732
+
+    \b
+        # Search for errors
+        lj log autoland 545896732 --pattern "ERROR|FAIL"
+
+    \b
+        # Search with context lines
+        lj log autoland 545896732 -p "assertion" -c 5
+
+    \b
+        # View last 100 lines
+        lj log autoland 545896732 --tail 100
+
+    \b
+        # Output as JSON (useful with --pattern)
+        lj --json log autoland 545896732 -p "TEST-UNEXPECTED"
+    """
+    client: TreeherderClient = ctx.obj["client"]
+
+    if head and tail:
+        error_console.print("[red]Error:[/red] Cannot use both --head and --tail")
+        sys.exit(1)
+
+    try:
+        if pattern:
+            _handle_log_search(client, ctx, project, job_id, pattern, context, log_name)
+        else:
+            _handle_log_display(client, ctx, project, job_id, log_name, head, tail)
+    except LumberjackError as e:
+        error_console.print(f"[red]Error:[/red] {e}")
+        sys.exit(1)
+
+
+def _handle_log_search(
+    client: TreeherderClient,
+    ctx: click.Context,
+    project: str,
+    job_id: int,
+    pattern: str,
+    context: int,
+    log_name: str,
+) -> None:
+    """Handle log search mode."""
+    matches = client.search_job_log(
+        project, job_id, pattern, log_name=log_name, context_lines=context
+    )
+
+    if ctx.obj["json"]:
+        output_json({"matches": matches, "total": len(matches)})
+        return
+
+    if not matches:
+        console.print(f"No matches found for pattern [cyan]{pattern}[/cyan]")
+        return
+
+    _display_log_matches(matches, pattern, context)
+
+
+def _handle_log_display(
+    client: TreeherderClient,
+    ctx: click.Context,
+    project: str,
+    job_id: int,
+    log_name: str,
+    head: int | None,
+    tail: int | None,
+) -> None:
+    """Handle full log display mode."""
+    log_content = client.get_job_log(project, job_id, log_name=log_name)
+    lines = _get_log_lines(log_content, head, tail)
+
+    if ctx.obj["json"]:
+        output_json({"log": "\n".join(lines), "line_count": len(lines)})
+        return
+
+    for line in lines:
+        click.echo(line)
 
 
 if __name__ == "__main__":

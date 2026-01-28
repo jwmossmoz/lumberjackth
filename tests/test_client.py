@@ -351,3 +351,155 @@ class TestErrorHandling:
         with TreeherderClient() as client:
             with pytest.raises(TreeherderAPIError):
                 client.get_repositories()
+
+
+class TestJobLogEndpoints:
+    """Tests for job log endpoints."""
+
+    @respx.mock
+    def test_get_job_log(self) -> None:
+        """Test fetching job log content."""
+        log_urls_mock = [
+            {
+                "id": 1,
+                "job_id": 12345,
+                "name": "live_backing_log",
+                "url": "https://example.com/log.txt",
+                "parse_status": "parsed",
+            }
+        ]
+        log_content = "Line 1: Starting test\nLine 2: Running test\nLine 3: Test passed"
+
+        respx.get("https://treeherder.mozilla.org/api/project/autoland/job-log-url/").mock(
+            return_value=httpx.Response(200, json=log_urls_mock)
+        )
+
+        respx.get("https://example.com/log.txt").mock(
+            return_value=httpx.Response(200, text=log_content)
+        )
+
+        with TreeherderClient() as client:
+            result = client.get_job_log("autoland", 12345)
+
+        assert result == log_content
+        assert "Line 1" in result
+
+    @respx.mock
+    def test_get_job_log_not_found(self) -> None:
+        """Test get_job_log raises error when log name not found."""
+        log_urls_mock = [
+            {
+                "id": 1,
+                "job_id": 12345,
+                "name": "errorsummary_json",
+                "url": "https://example.com/errors.json",
+                "parse_status": "parsed",
+            }
+        ]
+
+        respx.get("https://treeherder.mozilla.org/api/project/autoland/job-log-url/").mock(
+            return_value=httpx.Response(200, json=log_urls_mock)
+        )
+
+        with TreeherderClient() as client:
+            with pytest.raises(TreeherderNotFoundError) as exc_info:
+                client.get_job_log("autoland", 12345, log_name="live_backing_log")
+
+        assert "live_backing_log" in str(exc_info.value)
+
+    @respx.mock
+    def test_search_job_log(self) -> None:
+        """Test searching job log for patterns."""
+        log_urls_mock = [
+            {
+                "id": 1,
+                "job_id": 12345,
+                "name": "live_backing_log",
+                "url": "https://example.com/log.txt",
+                "parse_status": "parsed",
+            }
+        ]
+        log_content = """Line 1: Starting test
+Line 2: TEST-UNEXPECTED-FAIL | test.js | Assertion failed
+Line 3: Running cleanup
+Line 4: TEST-UNEXPECTED-FAIL | other.js | Timeout
+Line 5: Test finished"""
+
+        respx.get("https://treeherder.mozilla.org/api/project/autoland/job-log-url/").mock(
+            return_value=httpx.Response(200, json=log_urls_mock)
+        )
+
+        respx.get("https://example.com/log.txt").mock(
+            return_value=httpx.Response(200, text=log_content)
+        )
+
+        with TreeherderClient() as client:
+            matches = client.search_job_log("autoland", 12345, "TEST-UNEXPECTED-FAIL")
+
+        assert len(matches) == 2
+        assert matches[0]["line_number"] == 2
+        assert "Assertion failed" in matches[0]["line"]
+        assert matches[1]["line_number"] == 4
+        assert "Timeout" in matches[1]["line"]
+
+    @respx.mock
+    def test_search_job_log_with_context(self) -> None:
+        """Test searching job log with context lines."""
+        log_urls_mock = [
+            {
+                "id": 1,
+                "job_id": 12345,
+                "name": "live_backing_log",
+                "url": "https://example.com/log.txt",
+                "parse_status": "parsed",
+            }
+        ]
+        log_content = """Line 1: Before
+Line 2: ERROR here
+Line 3: After"""
+
+        respx.get("https://treeherder.mozilla.org/api/project/autoland/job-log-url/").mock(
+            return_value=httpx.Response(200, json=log_urls_mock)
+        )
+
+        respx.get("https://example.com/log.txt").mock(
+            return_value=httpx.Response(200, text=log_content)
+        )
+
+        with TreeherderClient() as client:
+            matches = client.search_job_log("autoland", 12345, "ERROR", context_lines=1)
+
+        assert len(matches) == 1
+        assert matches[0]["line_number"] == 2
+        assert "context" in matches[0]
+        assert len(matches[0]["context"]) == 3
+        assert "Line 1: Before" in matches[0]["context"]
+        assert "Line 3: After" in matches[0]["context"]
+
+    @respx.mock
+    @pytest.mark.asyncio
+    async def test_get_job_log_async(self) -> None:
+        """Test fetching job log content asynchronously."""
+        log_urls_mock = [
+            {
+                "id": 1,
+                "job_id": 12345,
+                "name": "live_backing_log",
+                "url": "https://example.com/log.txt",
+                "parse_status": "parsed",
+            }
+        ]
+        log_content = "Async log content"
+
+        respx.get("https://treeherder.mozilla.org/api/project/autoland/job-log-url/").mock(
+            return_value=httpx.Response(200, json=log_urls_mock)
+        )
+
+        respx.get("https://example.com/log.txt").mock(
+            return_value=httpx.Response(200, text=log_content)
+        )
+
+        async with TreeherderClient() as client:
+            result = await client.get_job_log_async("autoland", 12345)
+
+        assert result == log_content

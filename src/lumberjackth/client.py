@@ -480,6 +480,100 @@ class TreeherderClient:
         results = data.get("results", data) if isinstance(data, dict) else data
         return [JobLogUrl.model_validate(log) for log in results]
 
+    def get_job_log(
+        self,
+        project: str,
+        job_id: int,
+        log_name: str = "live_backing_log",
+    ) -> str:
+        """Fetch the raw log content for a job.
+
+        Args:
+            project: Repository name.
+            job_id: Job ID.
+            log_name: Name of the log to fetch (default: live_backing_log).
+                      Common values: live_backing_log, errorsummary_json
+
+        Returns:
+            The log content as a string.
+
+        Raises:
+            TreeherderNotFoundError: If the log is not found.
+        """
+        log_urls = self.get_job_log_urls(project, job_id)
+        for log in log_urls:
+            if log.name == log_name:
+                response = self._get_sync_client().get(log.url)
+                self._handle_error(response)
+                return response.text
+
+        raise TreeherderNotFoundError(
+            f"Log '{log_name}' not found for job {job_id}",
+            status_code=404,
+            response_body=None,
+        )
+
+    async def get_job_log_async(
+        self,
+        project: str,
+        job_id: int,
+        log_name: str = "live_backing_log",
+    ) -> str:
+        """Fetch the raw log content for a job asynchronously."""
+        log_urls = self.get_job_log_urls(project, job_id)
+        for log in log_urls:
+            if log.name == log_name:
+                response = await self._get_async_client().get(log.url)
+                self._handle_error(response)
+                return response.text
+
+        raise TreeherderNotFoundError(
+            f"Log '{log_name}' not found for job {job_id}",
+            status_code=404,
+            response_body=None,
+        )
+
+    def search_job_log(
+        self,
+        project: str,
+        job_id: int,
+        pattern: str,
+        log_name: str = "live_backing_log",
+        context_lines: int = 0,
+    ) -> list[dict[str, Any]]:
+        """Search a job's log for lines matching a regex pattern.
+
+        Args:
+            project: Repository name.
+            job_id: Job ID.
+            pattern: Regex pattern to search for.
+            log_name: Name of the log to search.
+            context_lines: Number of context lines before/after matches.
+
+        Returns:
+            List of dicts with 'line_number', 'line', and optionally 'context'.
+        """
+        import re  # noqa: PLC0415
+
+        log_content = self.get_job_log(project, job_id, log_name)
+        lines = log_content.splitlines()
+        regex = re.compile(pattern)
+        matches = []
+
+        for i, line in enumerate(lines):
+            if regex.search(line):
+                match_info: dict[str, Any] = {
+                    "line_number": i + 1,
+                    "line": line,
+                }
+                if context_lines > 0:
+                    start = max(0, i - context_lines)
+                    end = min(len(lines), i + context_lines + 1)
+                    match_info["context"] = lines[start:end]
+                matches.append(match_info)
+
+        return matches
+
     def get_text_log_errors(
         self,
         project: str,
