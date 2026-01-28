@@ -14,32 +14,32 @@ uv pip install lumberjackth
 
 ## CLI Usage
 
-Lumberjack provides the `lumberjack` command (or `lj` for short):
+Lumberjack provides the `lj` command (or `lumberjack` as an alias):
 
 ```bash
 # List repositories
-lumberjack repos
+lj repos
 
 # List recent pushes for mozilla-central
-lumberjack pushes mozilla-central
+lj pushes mozilla-central
 
 # List jobs for a specific push
-lumberjack jobs mozilla-central --push-id 12345
+lj jobs mozilla-central --push-id 12345
 
 # Get details for a specific job
-lumberjack job mozilla-central "abc123def/0" --logs
+lj job mozilla-central "abc123def/0" --logs
 
 # List performance alerts
-lumberjack perf-alerts --repository autoland
+lj perf-alerts --repository autoland
 
 # Query test failures by bug ID
-lumberjack failures 2012615 --tree autoland --platform windows11-64-24h2
+lj failures 2012615 --tree autoland --platform windows11-64-24h2
 
 # Show errors and bug suggestions for a failed job
-lumberjack errors autoland 545896732
+lj errors autoland 545896732
 
 # Output as JSON
-lumberjack --json pushes mozilla-central -n 5
+lj --json pushes mozilla-central -n 5
 ```
 
 ### Available Commands
@@ -54,6 +54,13 @@ lumberjack --json pushes mozilla-central -n 5
 | `errors <project> <job_id>` | Show error lines and bug suggestions |
 | `perf-alerts` | List performance alert summaries |
 | `perf-frameworks` | List performance testing frameworks |
+
+Run with `uvx` for zero-install execution:
+
+```bash
+uvx --from lumberjackth lj repos
+uvx --from lumberjackth lj failures 2012615 -t autoland
+```
 
 ### Options
 
