@@ -26,6 +26,9 @@ lj pushes mozilla-central
 # List jobs for a specific push
 lj jobs mozilla-central --push-id 12345
 
+# Filter jobs by platform regex and duration
+lj jobs autoland --push-id 12345 -p "linux.*64" --duration-min 60
+
 # Get details for a specific job
 lj job mozilla-central "abc123def/0" --logs
 
@@ -88,6 +91,9 @@ uvx --from lumberjackth lj failures 2012615 -t autoland
 - `--result` - Filter by result (success, testfailed, busted, etc.)
 - `--state` - Filter by state (pending, running, completed)
 - `--tier` - Filter by tier (1, 2, or 3)
+- `-p, --platform` - Filter by platform (regex pattern, e.g., 'linux.*64')
+- `-f, --filter` - Filter by job name (regex pattern, e.g., 'mochitest')
+- `--duration-min` - Filter to jobs with duration >= N seconds
 - `-n, --count` - Number of jobs to show (default: 20, or all when --push-id specified)
 
 #### job
@@ -102,8 +108,8 @@ uvx --from lumberjackth lj failures 2012615 -t autoland
 
 #### failures
 - `-t, --tree` - Repository filter (all, autoland, mozilla-central, etc.)
-- `-p, --platform` - Filter by platform (e.g., windows11-64-24h2, linux)
-- `-b, --build-type` - Filter by build type (e.g., asan, debug, opt)
+- `-p, --platform` - Filter by platform (regex pattern, e.g., 'windows.*64')
+- `-b, --build-type` - Filter by build type (regex pattern, e.g., 'asan')
 - `-s, --startday` - Start date YYYY-MM-DD (default: 7 days ago)
 - `-e, --endday` - End date YYYY-MM-DD (default: today)
 - `-n, --count` - Limit number of results
