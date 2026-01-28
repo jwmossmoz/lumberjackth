@@ -79,14 +79,22 @@ ignore = [
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-addopts = "--cov=lumberjackth --cov-report=term-missing"
+addopts = "--cov=lumberjackth --cov-report=term-missing --cov-fail-under=75"
 
 [tool.ty.environment]
 python-version = "3.11"
 
+[tool.ty.terminal]
+error-on-warning = true
+
+[tool.ty.rules]
+possibly-unresolved-reference = "error"
+unused-ignore-comment = "warn"
+
 [tool.coverage.run]
 source = ["src/lumberjackth"]
 branch = true
+omit = ["src/lumberjackth/cli.py"]
 
 [tool.coverage.report]
 exclude_lines = [
