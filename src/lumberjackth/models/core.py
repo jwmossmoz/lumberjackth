@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class RepositoryGroup(BaseModel):
@@ -155,7 +155,7 @@ class JobLogUrl(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     id: int
-    job_id: int = Field(alias="job")
+    job_id: int
     name: str
     url: str
     parse_status: str
