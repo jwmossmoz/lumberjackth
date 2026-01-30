@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from datetime import UTC, datetime
 from typing import Any
 
@@ -183,6 +184,144 @@ def _filter_failures(
     return failure_list
 
 
+def _display_jobs_table(job_list: list[Any], project: str, title_suffix: str = "") -> None:
+    """Display jobs in a table format."""
+    title = f"Jobs for {project}"
+    if title_suffix:
+        title = f"{title} {title_suffix}"
+
+    table = Table(title=title)
+    table.add_column("ID", style="dim")
+    table.add_column("Symbol", style="cyan")
+    table.add_column("Name")
+    table.add_column("Platform")
+    table.add_column("State")
+    table.add_column("Result")
+    table.add_column("Duration", justify="right")
+
+    for job in job_list:
+        result_style = ""
+        if job.result == "success":
+            result_style = "green"
+        elif job.result in ("testfailed", "busted", "exception"):
+            result_style = "red"
+        elif job.result == "retry":
+            result_style = "yellow"
+
+        duration = ""
+        if job.state == "completed":
+            duration = format_duration(job.duration_seconds)
+
+        table.add_row(
+            str(job.id),
+            f"{job.job_group_symbol}({job.job_type_symbol})",
+            job.job_type_name[:50] + "..." if len(job.job_type_name) > 50 else job.job_type_name,
+            job.platform,
+            job.state,
+            f"[{result_style}]{job.result}[/{result_style}]" if result_style else job.result,
+            duration,
+        )
+
+    console.print(table)
+
+
+def _watch_jobs(
+    client: TreeherderClient,
+    project: str,
+    push_id: int | None,
+    guid: str | None,
+    result: str | None,
+    state: str | None,
+    tier: int | None,
+    platform: str | None,
+    job_filter: str | None,
+    duration_min: int | None,
+    count: int,
+    interval: int,
+) -> None:
+    """Watch jobs with periodic refresh."""
+    previous_jobs: dict[int, tuple[str, str]] = {}  # job_id -> (state, result)
+
+    console.print(
+        f"[dim]Watching jobs (refresh every {interval}s, press Ctrl+C to stop)...[/dim]\n"
+    )
+
+    try:
+        iteration = 0
+        while True:
+            iteration += 1
+
+            # Fetch current jobs
+            job_list = client.get_jobs(
+                project,
+                count=count,
+                push_id=push_id,
+                job_guid=guid,
+                result=result,
+                state=state,
+                tier=tier,
+            )
+
+            # Apply client-side filters
+            job_list = _filter_jobs(job_list, platform, job_filter, duration_min)
+
+            # Track changes
+            current_jobs = {job.id: (job.state, job.result) for job in job_list}
+            new_jobs = [job for job in job_list if job.id not in previous_jobs]
+            changed_jobs = [
+                job
+                for job in job_list
+                if job.id in previous_jobs and previous_jobs[job.id] != current_jobs[job.id]
+            ]
+
+            # Clear screen and display
+            console.clear()
+            timestamp = datetime.now(tz=UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
+            suffix = f"(refresh #{iteration} at {timestamp})"
+
+            _display_jobs_table(job_list, project, suffix)
+
+            # Show summary stats
+            total = len(job_list)
+            by_state = {}
+            by_result = {}
+            for job in job_list:
+                by_state[job.state] = by_state.get(job.state, 0) + 1
+                by_result[job.result] = by_result.get(job.result, 0) + 1
+
+            console.print(f"\n[bold]Summary:[/bold] {total} jobs")
+            console.print(f"  States: {', '.join(f'{k}={v}' for k, v in sorted(by_state.items()))}")
+            console.print(
+                f"  Results: {', '.join(f'{k}={v}' for k, v in sorted(by_result.items()))}"
+            )
+
+            # Show changes since last refresh
+            if iteration > 1:
+                if new_jobs:
+                    console.print(f"\n[yellow]New jobs:[/yellow] {len(new_jobs)}")
+                if changed_jobs:
+                    console.print(f"[yellow]Changed jobs:[/yellow] {len(changed_jobs)}")
+                    for job in changed_jobs[:5]:  # Show first 5 changes
+                        old_state, old_result = previous_jobs[job.id]
+                        console.print(
+                            f"  • {job.job_type_name[:40]}: "
+                            f"{old_state}/{old_result} → {job.state}/{job.result}"
+                        )
+                    if len(changed_jobs) > 5:
+                        console.print(f"  ... and {len(changed_jobs) - 5} more")
+
+            console.print(f"\n[dim]Next refresh in {interval}s (Ctrl+C to stop)[/dim]")
+
+            previous_jobs = current_jobs
+            time.sleep(interval)
+
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Stopped watching[/yellow]")
+    except LumberjackError as e:
+        error_console.print(f"\n[red]Error:[/red] {e}")
+        sys.exit(1)
+
+
 @click.group()
 @click.option(
     "--server",
@@ -309,6 +448,7 @@ def pushes(
 @main.command("jobs")
 @click.argument("project")
 @click.option("--push-id", type=int, help="Filter by push ID.")
+@click.option("--revision", "-r", help="Filter by revision (alternative to --push-id).")
 @click.option("--guid", help="Filter by job GUID.")
 @click.option("--result", help="Filter by result (success, testfailed, etc.).")
 @click.option("--state", help="Filter by state (pending, running, completed).")
@@ -336,11 +476,25 @@ def pushes(
     type=int,
     help="Number of jobs to show (default: 20, or all when --push-id is specified).",
 )
+@click.option(
+    "--watch",
+    "-w",
+    is_flag=True,
+    help="Watch for job updates (refreshes periodically).",
+)
+@click.option(
+    "--interval",
+    "-i",
+    default=30,
+    type=int,
+    help="Refresh interval in seconds when using --watch (default: 30).",
+)
 @click.pass_context
 def jobs(
     ctx: click.Context,
     project: str,
     push_id: int | None,
+    revision: str | None,
     guid: str | None,
     result: str | None,
     state: str | None,
@@ -349,16 +503,60 @@ def jobs(
     job_filter: str | None,
     duration_min: int | None,
     count: int | None,
+    watch: bool,
+    interval: int,
 ) -> None:
     """List jobs for a project.
 
     PROJECT is the repository name (e.g., mozilla-central, autoland).
+
+    Examples:
+
+    \b
+        # Watch jobs for a specific revision
+        lj jobs try --revision abc123 --watch
+
+    \b
+        # Watch only test failures
+        lj jobs autoland --push-id 12345 --result testfailed --watch
     """
     client: TreeherderClient = ctx.obj["client"]
+
+    # Resolve revision to push_id if provided
+    if revision and not push_id:
+        try:
+            push_list = client.get_pushes(project, count=1, revision=revision)
+            if not push_list:
+                error_console.print(f"[red]Error:[/red] No push found for revision {revision}")
+                sys.exit(1)
+            push_id = push_list[0].id
+        except LumberjackError as e:
+            error_console.print(f"[red]Error:[/red] {e}")
+            sys.exit(1)
 
     # Default to all jobs when filtering by push_id, otherwise 20
     if count is None:
         count = 2000 if push_id else 20
+
+    if watch:
+        if ctx.obj["json"]:
+            error_console.print("[red]Error:[/red] --watch is not compatible with --json")
+            sys.exit(1)
+        _watch_jobs(
+            client,
+            project,
+            push_id,
+            guid,
+            result,
+            state,
+            tier,
+            platform,
+            job_filter,
+            duration_min,
+            count,
+            interval,
+        )
+        return
 
     try:
         job_list = client.get_jobs(
@@ -382,41 +580,7 @@ def jobs(
             console.print(f"No jobs found for [cyan]{project}[/cyan]")
             return
 
-        table = Table(title=f"Jobs for {project}")
-        table.add_column("ID", style="dim")
-        table.add_column("Symbol", style="cyan")
-        table.add_column("Name")
-        table.add_column("Platform")
-        table.add_column("State")
-        table.add_column("Result")
-        table.add_column("Duration", justify="right")
-
-        for job in job_list:
-            result_style = ""
-            if job.result == "success":
-                result_style = "green"
-            elif job.result in ("testfailed", "busted", "exception"):
-                result_style = "red"
-            elif job.result == "retry":
-                result_style = "yellow"
-
-            duration = ""
-            if job.state == "completed":
-                duration = format_duration(job.duration_seconds)
-
-            table.add_row(
-                str(job.id),
-                f"{job.job_group_symbol}({job.job_type_symbol})",
-                job.job_type_name[:50] + "..."
-                if len(job.job_type_name) > 50
-                else job.job_type_name,
-                job.platform,
-                job.state,
-                f"[{result_style}]{job.result}[/{result_style}]" if result_style else job.result,
-                duration,
-            )
-
-        console.print(table)
+        _display_jobs_table(job_list, project)
 
     except LumberjackError as e:
         error_console.print(f"[red]Error:[/red] {e}")
