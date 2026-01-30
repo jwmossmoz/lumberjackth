@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-01-29
+
+### Added
+
+- New `--watch/-w` flag for `jobs` command to continuously monitor job status
+- New `--interval/-i` flag to control watch refresh rate (default: 30 seconds)
+- New `--revision/-r` flag for `jobs` command as alternative to `--push-id`
+- Watch mode displays summary stats (job states and results)
+- Watch mode highlights changes between refreshes (new jobs, status changes)
+- Graceful Ctrl+C handling for watch mode
+
+## [1.2.0] - 2026-01-28
+
+### Added
+
+- New CLI command `log <project> <job_id>`: Fetch and display job logs
+  - Search logs with `--pattern` (regex support)
+  - Show context lines around matches with `--context`
+  - Display first/last N lines with `--head`/`--tail`
+  - JSON output support with `--json`
+- New client methods:
+  - `get_job_log()`: Fetch raw log content from a job
+  - `search_job_log()`: Search log content with regex patterns
+- Enhanced `jobs` command filtering:
+  - Platform regex filtering with `-p/--platform`
+  - Job name regex filtering with `-f/--filter`
+  - Duration filtering with `--duration-min`
+- Enhanced `failures` command with regex-based filtering
+
 ## [1.1.0] - 2026-01-28
 
 ### Added
@@ -81,7 +110,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `/api/machineplatforms/` - Machine platforms
   - `/api/changelog/` - Treeherder changelog
 
-[Unreleased]: https://github.com/jwmossmoz/lumberjackth/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/jwmossmoz/lumberjackth/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/jwmossmoz/lumberjackth/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/jwmossmoz/lumberjackth/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/jwmossmoz/lumberjackth/compare/v1.0.6...v1.1.0
 [1.0.6]: https://github.com/jwmossmoz/lumberjackth/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/jwmossmoz/lumberjackth/compare/v1.0.4...v1.0.5
