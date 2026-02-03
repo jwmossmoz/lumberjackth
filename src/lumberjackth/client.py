@@ -73,7 +73,7 @@ class TreeherderClient:
         self.timeout = timeout
         self._headers = {
             "Accept": f"application/json; version={API_VERSION}",
-            "User-Agent": "lumberjackth/1.3.0",
+            "User-Agent": "lumberjackth/1.4.0",
         }
         self._sync_client: httpx.Client | None = None
         self._async_client: httpx.AsyncClient | None = None
@@ -637,6 +637,48 @@ class TreeherderClient:
         self._handle_error(response)
         data = response.json()
         return [BugSuggestion.model_validate(s) for s in data]
+
+    def get_similar_jobs(
+        self,
+        project: str,
+        job_id: int,
+        *,
+        count: int = 10,
+    ) -> list[Job]:
+        """Get similar jobs (same job type from recent pushes).
+
+        This endpoint returns jobs of the same type from other recent pushes,
+        useful for comparing a failing job against recent passing runs.
+
+        Args:
+            project: Repository name.
+            job_id: Job ID to find similar jobs for.
+            count: Maximum number of similar jobs to return (default: 10).
+
+        Returns:
+            List of Job objects representing similar jobs.
+        """
+        url = f"{self.server_url}/api/project/{project}/jobs/{job_id}/similar_jobs/"
+        response = self._get_sync_client().get(url, params={"count": count})
+        self._handle_error(response)
+        data = response.json()
+        results = data.get("results", data) if isinstance(data, dict) else data
+        return [Job.model_validate(j) for j in results]
+
+    async def get_similar_jobs_async(
+        self,
+        project: str,
+        job_id: int,
+        *,
+        count: int = 10,
+    ) -> list[Job]:
+        """Get similar jobs asynchronously."""
+        url = f"{self.server_url}/api/project/{project}/jobs/{job_id}/similar_jobs/"
+        response = await self._get_async_client().get(url, params={"count": count})
+        self._handle_error(response)
+        data = response.json()
+        results = data.get("results", data) if isinstance(data, dict) else data
+        return [Job.model_validate(j) for j in results]
 
     # -------------------------------------------------------------------------
     # Failures by bug endpoint

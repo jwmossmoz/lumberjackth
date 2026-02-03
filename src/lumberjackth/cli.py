@@ -184,6 +184,53 @@ def _filter_failures(
     return failure_list
 
 
+def _get_result_style(result: str) -> str:
+    """Get the Rich style for a job result."""
+    if result == "success":
+        return "green"
+    if result in ("testfailed", "busted", "exception"):
+        return "red"
+    if result == "retry":
+        return "yellow"
+    if result == "usercancel":
+        return "dim"
+    return ""
+
+
+def _display_similar_jobs_table(job_list: list[Any], job_id: int, job_type_name: str) -> None:
+    """Display similar jobs in a table format."""
+    table = Table(title=f"Similar Jobs for {job_id} ({job_type_name[:50]})")
+    table.add_column("ID", style="dim")
+    table.add_column("Push ID", style="dim")
+    table.add_column("Author")
+    table.add_column("Result")
+    table.add_column("Duration", justify="right")
+    table.add_column("Task ID", style="dim")
+
+    for job in job_list:
+        result_style = _get_result_style(job.result)
+        duration = format_duration(job.duration_seconds) if job.state == "completed" else ""
+        task_id = job.task_id[:12] if job.task_id else "-"
+
+        table.add_row(
+            str(job.id),
+            str(job.push_id),
+            job.who[:25] if len(job.who) > 25 else job.who,
+            f"[{result_style}]{job.result}[/{result_style}]" if result_style else job.result,
+            duration,
+            task_id,
+        )
+
+    console.print(table)
+
+    # Show summary
+    results: dict[str, int] = {}
+    for job in job_list:
+        results[job.result] = results.get(job.result, 0) + 1
+    summary_parts = [f"{k}={v}" for k, v in sorted(results.items())]
+    console.print(f"\n[bold]Summary:[/bold] {', '.join(summary_parts)}")
+
+
 def _display_jobs_table(job_list: list[Any], project: str, title_suffix: str = "") -> None:
     """Display jobs in a table format."""
     title = f"Jobs for {project}"
@@ -200,13 +247,7 @@ def _display_jobs_table(job_list: list[Any], project: str, title_suffix: str = "
     table.add_column("Duration", justify="right")
 
     for job in job_list:
-        result_style = ""
-        if job.result == "success":
-            result_style = "green"
-        elif job.result in ("testfailed", "busted", "exception"):
-            result_style = "red"
-        elif job.result == "retry":
-            result_style = "yellow"
+        result_style = _get_result_style(job.result)
 
         duration = ""
         if job.state == "completed":
@@ -878,6 +919,69 @@ def errors(
         if suggestions:
             suggestion_list = client.get_bug_suggestions(project, job_id)
             _display_bug_suggestions(suggestion_list)
+
+    except LumberjackError as e:
+        error_console.print(f"[red]Error:[/red] {e}")
+        sys.exit(1)
+
+
+@main.command("similar-jobs")
+@click.argument("project")
+@click.argument("job_id", type=int)
+@click.option(
+    "-n",
+    "--count",
+    default=10,
+    type=int,
+    help="Number of similar jobs to show (default: 10).",
+)
+@click.pass_context
+def similar_jobs(
+    ctx: click.Context,
+    project: str,
+    job_id: int,
+    count: int,
+) -> None:
+    """List similar jobs (same job type from recent pushes).
+
+    PROJECT is the repository name (e.g., try, autoland).
+    JOB_ID is the numeric job ID.
+
+    This command finds jobs of the same type from other recent pushes,
+    useful for comparing a failing job against recent passing runs to
+    determine if a failure is a new regression or an existing intermittent.
+
+    Examples:
+
+    \b
+        # Find similar jobs for job 546769427 on try
+        lj similar-jobs try 546769427
+
+    \b
+        # Get more similar jobs
+        lj similar-jobs try 546769427 -n 20
+
+    \b
+        # Output as JSON for scripting
+        lj --json similar-jobs try 546769427
+    """
+    client: TreeherderClient = ctx.obj["client"]
+
+    try:
+        job_list = client.get_similar_jobs(project, job_id, count=count)
+
+        if ctx.obj["json"]:
+            output_json(job_list)
+            return
+
+        if not job_list:
+            console.print(f"No similar jobs found for job [cyan]{job_id}[/cyan]")
+            return
+
+        # Use the first similar job's type name (all similar jobs have the same type)
+        job_type_name = job_list[0].job_type_name if job_list else "Unknown"
+
+        _display_similar_jobs_table(job_list, job_id, job_type_name)
 
     except LumberjackError as e:
         error_console.print(f"[red]Error:[/red] {e}")

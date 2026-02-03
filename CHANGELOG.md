@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-02-02
+
+### Added
+
+- New CLI command `similar-jobs <project> <job_id>`: Find similar jobs (same job type from recent pushes)
+  - Useful for comparing a failing job against recent passing runs
+  - Shows job ID, push ID, author, result, duration, and task ID
+  - `-n/--count` option to control number of results (default: 10)
+  - JSON output support with `--json`
+- New client methods:
+  - `get_similar_jobs()`: Query `/api/project/{project}/jobs/{job_id}/similar_jobs/`
+  - `get_similar_jobs_async()`: Async version of the above
+
 ## [1.3.0] - 2026-01-29
 
 ### Added
@@ -110,7 +123,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `/api/machineplatforms/` - Machine platforms
   - `/api/changelog/` - Treeherder changelog
 
-[Unreleased]: https://github.com/jwmossmoz/lumberjackth/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/jwmossmoz/lumberjackth/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/jwmossmoz/lumberjackth/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/jwmossmoz/lumberjackth/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/jwmossmoz/lumberjackth/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/jwmossmoz/lumberjackth/compare/v1.0.6...v1.1.0

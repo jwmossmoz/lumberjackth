@@ -327,6 +327,71 @@ class TestBugSuggestionsEndpoint:
         assert suggestions[0].bugs["open_recent"][0].id == 123456
 
 
+class TestSimilarJobsEndpoint:
+    """Tests for similar jobs endpoint."""
+
+    @respx.mock
+    def test_get_similar_jobs(self) -> None:
+        """Test fetching similar jobs for a job."""
+        mock_data = {
+            "results": [
+                {
+                    "id": 546767320,
+                    "job_guid": "52fc3bdd-b53e-42a9-b272-c6c2717ca875/0",
+                    "push_id": 1822012,
+                    "result_set_id": 1822012,
+                    "build_architecture": "-",
+                    "build_os": "-",
+                    "build_platform": "windows11-64-24h2",
+                    "build_platform_id": 1002,
+                    "build_system_type": "taskcluster",
+                    "job_group_id": 448,
+                    "job_group_name": "Mochitests",
+                    "job_group_symbol": "M",
+                    "job_group_description": "",
+                    "job_type_id": 390669,
+                    "job_type_name": "test-windows11-64-24h2-asan/opt-mochitest-browser-chrome-14",
+                    "job_type_symbol": "bc14",
+                    "job_type_description": "",
+                    "machine_name": "vm-test",
+                    "machine_platform_architecture": "-",
+                    "machine_platform_os": "-",
+                    "platform": "windows11-64-24h2",
+                    "platform_option": "asan",
+                    "option_collection_hash": "abc123",
+                    "state": "completed",
+                    "result": "success",
+                    "failure_classification_id": 1,
+                    "tier": 1,
+                    "submit_timestamp": 1770084882,
+                    "start_timestamp": 1770086211,
+                    "end_timestamp": 1770087584,
+                    "last_modified": "2026-02-03T02:59:44.644439",
+                    "reason": "scheduled",
+                    "who": "test@example.com",
+                    "ref_data_name": "abc123",
+                    "signature": "abc123",
+                    "task_id": "Uvw73bU-QqmycsbCcXyodQ",
+                    "retry_id": 0,
+                },
+            ],
+            "meta": {"offset": 0, "count": 1, "repository": "try"},
+        }
+
+        respx.get(
+            "https://treeherder.mozilla.org/api/project/try/jobs/546769427/similar_jobs/"
+        ).mock(return_value=httpx.Response(200, json=mock_data))
+
+        with TreeherderClient() as client:
+            similar = client.get_similar_jobs("try", 546769427, count=5)
+
+        assert len(similar) == 1
+        assert similar[0].id == 546767320
+        assert similar[0].result == "success"
+        assert "mochitest-browser-chrome-14" in similar[0].job_type_name
+        assert similar[0].task_id == "Uvw73bU-QqmycsbCcXyodQ"
+
+
 class TestErrorHandling:
     """Tests for error handling."""
 
